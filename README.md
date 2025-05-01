@@ -9,7 +9,7 @@ A Node.js script to download Limitless Lifelog transcripts via the API.
 - Maintains a state file to track the last downloaded log
 - Handles API pagination
 - Can be run manually or as a scheduled job (cron)
-- Detailed logging
+- Detailed logging with automatic log rotation
 - Converts JSON files to human-readable text transcripts
 
 ## Setup
@@ -98,6 +98,15 @@ You can provide either:
 - Path relative to the project: `lifelogs/file.json`
 - Just the filename: `file.json` (the script will look in the lifelogs directory)
 
+### Automatic Log Rotation
+
+The script includes automatic log rotation to prevent the log file from growing too large:
+
+- The log file size is checked at the start of each run
+- If the log file exceeds 1MB (1,048,576 bytes), it's truncated to 900KB (921,600 bytes)
+- During truncation, the script preserves the most recent log entries
+- No manual maintenance of log files is required
+
 ### Automation (Cron)
 
 To set up automatic periodic downloads, you can create a cron job. Here's an example crontab entry that runs the script every hour:
@@ -115,15 +124,16 @@ Make sure to replace `/path/to/limitless-downloader` with the absolute path to y
 
 ### Download Script Logic
 
-1. The script first loads configuration from the `.env` file and sets up logging.
-2. It checks for a state file (`.last_fetch_timestamp`) to determine if this is the first run.
-3. If the state file exists, it performs an incremental fetch, downloading only logs newer than the last timestamp.
-4. If it's the first run, it fetches logs day by day starting from a predefined date.
-5. For each lifelog received from the API:
+1. The script first checks the log file size and truncates it if necessary.
+2. It loads configuration from the `.env` file and sets up logging.
+3. It checks for a state file (`.last_fetch_timestamp`) to determine if this is the first run.
+4. If the state file exists, it performs an incremental fetch, downloading only logs newer than the last timestamp.
+5. If it's the first run, it fetches logs day by day starting from a predefined date.
+6. For each lifelog received from the API:
    - It constructs a filename using the lifelog's timestamp and ID.
    - It checks if a file with this name already exists (to avoid duplicates).
    - If the file doesn't exist, it saves the lifelog data to a new file.
-6. After successful downloads, it updates the state file with the timestamp of the latest log (plus a small buffer).
+7. After successful downloads, it updates the state file with the timestamp of the latest log (plus a small buffer).
 
 ### Transcript Converter Logic
 
@@ -141,7 +151,7 @@ Make sure to replace `/path/to/limitless-downloader` with the absolute path to y
 - `convert_to_transcript.js`: Transcript converter script
 - `.env`: Configuration file (create this yourself with your API key)
 - `.last_fetch_timestamp`: State file (created automatically after first run)
-- `fetch_lifelogs.log`: Log file
+- `fetch_lifelogs.log`: Log file (automatically rotated when it exceeds 1MB)
 - `lifelogs/`: Directory where downloaded logs are stored
 - `transcripts/`: Directory where text transcripts are stored
 - `README.md`: Documentation

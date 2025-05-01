@@ -16,10 +16,59 @@ const winston = require('winston');
 // Configuration
 const LIFELOGS_DIR = path.join(__dirname, 'lifelogs');
 const STATE_FILE = path.join(__dirname, '.last_fetch_timestamp');
+const LOG_FILE = path.join(__dirname, 'fetch_lifelogs.log');
 const API_BASE_URL = 'https://api.limitless.ai/v1/lifelogs';
 const LIMIT = 10; // Max allowed by API for pagination
 const FIRST_RUN_START_DATE = '2025-03-10'; // First date with available data
 const TIMEZONE = process.env.TIMEZONE || 'UTC'; // Default timezone, can be overridden in .env
+const MAX_LOG_SIZE = 1024 * 1024; // 1MB
+const TARGET_LOG_SIZE = 900 * 1024; // 900KB
+
+/**
+ * Check log file size and rotate if necessary
+ */
+async function checkLogFileSize() {
+  try {
+    // Check if log file exists
+    if (!await fs.pathExists(LOG_FILE)) {
+      return;
+    }
+    
+    // Get file stats to check size
+    const stats = await fs.stat(LOG_FILE);
+    
+    // If log file is larger than MAX_LOG_SIZE, truncate it
+    if (stats.size > MAX_LOG_SIZE) {
+      console.log(`Log file size (${Math.round(stats.size / 1024)}KB) exceeds limit. Truncating to ${Math.round(TARGET_LOG_SIZE / 1024)}KB.`);
+      
+      // Read the last portion of the file (TARGET_LOG_SIZE bytes)
+      const buffer = Buffer.alloc(TARGET_LOG_SIZE);
+      const fileHandle = await fs.open(LOG_FILE, 'r');
+      await fs.read(fileHandle, buffer, 0, TARGET_LOG_SIZE, stats.size - TARGET_LOG_SIZE);
+      await fs.close(fileHandle);
+      
+      // Find the first complete line (first newline)
+      let startPos = 0;
+      while (startPos < buffer.length && buffer[startPos] !== 10 && buffer[startPos] !== 13) {
+        startPos++;
+      }
+      startPos++; // Skip the newline
+      
+      // Extract the content to keep
+      const contentToKeep = buffer.slice(startPos).toString('utf8');
+      
+      // Backup the old log file (optional)
+      // await fs.copy(LOG_FILE, `${LOG_FILE}.bak`);
+      
+      // Write the truncated content back
+      await fs.writeFile(LOG_FILE, contentToKeep);
+      
+      console.log(`Log file truncated to ${Math.round(contentToKeep.length / 1024)}KB`);
+    }
+  } catch (error) {
+    console.error(`Error checking log file size: ${error.message}`);
+  }
+}
 
 // Set up logging
 const logger = winston.createLogger({
@@ -31,7 +80,7 @@ const logger = winston.createLogger({
     })
   ),
   transports: [
-    new winston.transports.File({ filename: path.join(__dirname, 'fetch_lifelogs.log') }),
+    new winston.transports.File({ filename: LOG_FILE }),
     new winston.transports.Console()
   ]
 });
@@ -253,6 +302,9 @@ const performFirstRun = async () => {
 
 // Main function
 const main = async () => {
+  // Check log file size before starting
+  await checkLogFileSize();
+  
   logger.info('Script started.');
   
   // Ensure lifelogs directory exists
