@@ -104,10 +104,12 @@ To set up automatic periodic downloads, you can create a cron job. Here's an exa
 
 ```crontab
 # Run the Limitless lifelog fetcher every hour
-0 * * * * cd /path/to/limitless-lifelog-downloader && node index.js >> fetch_lifelogs.log 2>&1
+0 * * * * cd /path/to/limitless-downloader && node index.js && node convert_to_transcript.js
 ```
 
-Make sure to replace `/path/to/limitless-lifelog-downloader` with the absolute path to your script's directory.
+Note: On a Mac, cron may require that you provide the full path to `node`, which you can determine with `which node`
+
+Make sure to replace `/path/to/limitless-downloader` with the absolute path to your script's directory.
 
 ## How It Works
 
