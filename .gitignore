@@ -15,3 +15,7 @@ npm-debug.log*
 
 # Downloaded lifelogs data
 lifelogs/ 
+transcripts/
+
+# Mac Finder
+.DS_Store

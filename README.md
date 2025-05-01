@@ -10,6 +10,7 @@ A Node.js script to download Limitless Lifelog transcripts via the API.
 - Handles API pagination
 - Can be run manually or as a scheduled job (cron)
 - Detailed logging
+- Converts JSON files to human-readable text transcripts
 
 ## Setup
 
@@ -38,17 +39,18 @@ LIMITLESS_API_KEY="YOUR_API_KEY_HERE"
 # TIMEZONE="UTC"
 ```
 
-4. Make sure the script is executable (for Unix/Linux/Mac):
+4. Make sure the scripts are executable (for Unix/Linux/Mac):
 
 ```bash
 chmod +x index.js
+chmod +x convert_to_transcript.js
 ```
 
 ## Usage
 
-### Manual Execution
+### Downloading Lifelogs
 
-To run the script manually:
+To run the download script manually:
 
 ```bash
 node index.js
@@ -59,6 +61,42 @@ Or using the npm script:
 ```bash
 npm start
 ```
+
+### Converting to Text Transcripts
+
+The project includes a script to convert the JSON lifelog files into more readable text transcripts. This script:
+
+- Creates a `transcripts` directory where text files will be stored
+- Generates well-formatted transcripts from the JSON data
+- Skips files that already have a corresponding text transcript
+- Can process a single file or all files
+
+#### Convert All Files
+
+To convert all JSON files in the `lifelogs` directory that don't already have a corresponding text file:
+
+```bash
+node convert_to_transcript.js
+```
+
+Or using the npm script:
+
+```bash
+npm run convert
+```
+
+#### Convert a Single File
+
+To convert a specific JSON file:
+
+```bash
+node convert_to_transcript.js 2025_05_01_12_18_53Z_miavwS4SQR1B4LjbodO9.json
+```
+
+You can provide either:
+- Full path: `/path/to/file.json`
+- Path relative to the project: `lifelogs/file.json`
+- Just the filename: `file.json` (the script will look in the lifelogs directory)
 
 ### Automation (Cron)
 
@@ -73,7 +111,7 @@ Make sure to replace `/path/to/limitless-lifelog-downloader` with the absolute p
 
 ## How It Works
 
-### Script Logic
+### Download Script Logic
 
 1. The script first loads configuration from the `.env` file and sets up logging.
 2. It checks for a state file (`.last_fetch_timestamp`) to determine if this is the first run.
@@ -85,26 +123,39 @@ Make sure to replace `/path/to/limitless-lifelog-downloader` with the absolute p
    - If the file doesn't exist, it saves the lifelog data to a new file.
 6. After successful downloads, it updates the state file with the timestamp of the latest log (plus a small buffer).
 
+### Transcript Converter Logic
+
+1. The script reads JSON files from the `lifelogs` directory.
+2. For each file, it extracts key information:
+   - Conversation title and metadata
+   - Speaker names and timestamps
+   - The actual conversation content
+3. It formats this data into a readable text transcript, organizing content by sections.
+4. The transcript is saved as a text file in the `transcripts` directory with the same base filename.
+
 ### Folder Structure
 
-- `index.js`: Main script
+- `index.js`: Main download script
+- `convert_to_transcript.js`: Transcript converter script
 - `.env`: Configuration file (create this yourself with your API key)
 - `.last_fetch_timestamp`: State file (created automatically after first run)
 - `fetch_lifelogs.log`: Log file
 - `lifelogs/`: Directory where downloaded logs are stored
+- `transcripts/`: Directory where text transcripts are stored
 - `README.md`: Documentation
 - `package.json`: Node.js dependencies
 
 ## Error Handling
 
-The script handles various errors:
+The scripts handle various errors:
 - Missing API key
 - Network issues
 - Invalid API responses
 - File system errors
+- Invalid/corrupt JSON files
 
-All errors are logged to the console and to the `fetch_lifelogs.log` file.
+All errors are logged to the console and to the log files.
 
 ## Notes
 
-This script was refactored from a shell script to Node.js to leverage more powerful libraries and improve maintainability. 
+This project was refactored from a shell script to Node.js to leverage more powerful libraries and improve maintainability. 
